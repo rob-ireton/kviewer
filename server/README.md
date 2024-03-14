@@ -37,5 +37,6 @@ Port forward to the service:
 Use API endpoints like this
 - ``curl localhost:8088/pods``
 - ``curl localhost:8088/events``
+- ``curl localhost:8088/deployments``
 
 	

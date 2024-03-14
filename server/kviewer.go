@@ -9,7 +9,6 @@ import (
 	"net/http"
 	"path/filepath"
 
-	k8corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
@@ -19,27 +18,6 @@ import (
 )
 
 var clientset *kubernetes.Clientset
-
-type PodResponse struct {
-	Error string `json:"error"`
-	// These are too big to send over the wire and there are too many fields
-	// Pods  []k8corev1.Pod `json:"result"`
-	Pods []AbbreviatedPod `json:"result"`
-}
-
-type EventResponse struct {
-	Error  string           `json:"error"`
-	Events []k8corev1.Event `json:"result"`
-}
-
-type AbbreviatedPod struct {
-	Name           string            `json:"name"`
-	StartTime      string            `json:"startTime"`
-	Namespace      string            `json:"namespace"`
-	Labels         map[string]string `json:"labels"`
-	OwnerReference string            `json:"ownerReference"`
-	OwnerKind      string            `json:"ownerKind"`
-}
 
 // func getKubectlContentFromProxy(url string) (string, error) {
 // 	resp, err := http.Get(url)
@@ -61,7 +39,6 @@ type AbbreviatedPod struct {
 // }
 
 func podsHandler(w http.ResponseWriter, r *http.Request) {
-	// Step 1: get pod content
 	pods, err := clientset.CoreV1().Pods("").List(context.TODO(), v1.ListOptions{})
 	fmt.Printf("There are %d pods in the cluster\n", len(pods.Items))
 
@@ -83,20 +60,15 @@ func podsHandler(w http.ResponseWriter, r *http.Request) {
 		})
 	}
 
-	// Step 2: generate response
 	resp := &PodResponse{
 		Pods:  abbrpods,
 		Error: errMsg,
 	}
 
-	enc := json.NewEncoder(w)
-	if err := enc.Encode(resp); err != nil {
-		log.Printf("can't encode %v - %s", resp, err)
-	}
+	encodeResponseToJSON(w, resp)
 }
 
 func eventsHandler(w http.ResponseWriter, r *http.Request) {
-	// Step 1: get events content
 	events, err := clientset.CoreV1().Events("").List(context.TODO(), v1.ListOptions{})
 	fmt.Printf("There are %d events in the cluster\n", len(events.Items))
 
@@ -105,15 +77,44 @@ func eventsHandler(w http.ResponseWriter, r *http.Request) {
 		errMsg = "Request failed"
 	}
 
-	// This will work but we'll double json encode so end up with escaped quotes
-	//data, _ := json.Marshal(events)
-
-	// Step 2: generate response
 	resp := &EventResponse{
 		Events: events.Items,
 		Error:  errMsg,
 	}
 
+	encodeResponseToJSON(w, resp)
+}
+
+func deploymentsHandler(w http.ResponseWriter, r *http.Request) {
+	deployments, err := clientset.AppsV1().Deployments("").List(context.TODO(), v1.ListOptions{})
+	fmt.Printf("There are %d deployments in the cluster\n", len(deployments.Items))
+
+	errMsg := "ok"
+	if err != nil {
+		errMsg = "Request failed"
+	}
+
+	var abbrDeps []AbbreviatedDeployment
+
+	for _, deployment := range deployments.Items {
+		abbrDeps = append(abbrDeps, AbbreviatedDeployment{
+			Name:         deployment.Name,
+			CreationTime: deployment.CreationTimestamp.String(),
+			Namespace:    deployment.Namespace,
+			Labels:       deployment.Labels,
+			Replicas:     deployment.Status.Replicas,
+		})
+	}
+
+	resp := &DeploymentResponse{
+		Deployments: abbrDeps,
+		Error:       errMsg,
+	}
+
+	encodeResponseToJSON(w, resp)
+}
+
+func encodeResponseToJSON(w http.ResponseWriter, resp interface{}) {
 	enc := json.NewEncoder(w)
 	if err := enc.Encode(resp); err != nil {
 		log.Printf("can't encode %v - %s", resp, err)
@@ -121,8 +122,7 @@ func eventsHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func setupClientset() {
-
-	// TODO try inside the cluster first
+	// Try inside the cluster first
 	config, err := rest.InClusterConfig()
 
 	if err != nil {
@@ -161,6 +161,7 @@ func main() {
 	// Now we can start the server
 	http.HandleFunc("/pods", podsHandler)
 	http.HandleFunc("/events", eventsHandler)
+	http.HandleFunc("/deployments", deploymentsHandler)
 
 	addr := ":8088"
 	log.Printf("server ready on %s", addr)
