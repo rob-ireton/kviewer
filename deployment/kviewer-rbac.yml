@@ -11,9 +11,9 @@ metadata:
   namespace: default
 rules:
 - apiGroups: [ "" ]
-  resources: [ "pods", "services", "namespaces", "events", "deployments" ]
+  resources: [ "pods", "services", "namespaces", "events" ]
   verbs: [ "get", "list", "watch"]
-- apiGroups: [ "extensions" ]
+- apiGroups: [ "extensions", "apps" ]
   resources: [ "deployments" ]
   verbs: [ "get", "list", "watch"]
 ---
