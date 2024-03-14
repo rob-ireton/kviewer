@@ -1,0 +1,32 @@
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: kviewer-acct
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: kviewer-reader
+  namespace: default
+rules:
+- apiGroups: [ "" ]
+  resources: [ "pods", "services", "namespaces", "events", "deployments" ]
+  verbs: [ "get", "list", "watch"]
+- apiGroups: [ "extensions" ]
+  resources: [ "deployments" ]
+  verbs: [ "get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: default-pod-reader
+  namespace: default
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: kviewer-reader
+subjects:
+- kind: ServiceAccount
+  name: kviewer-acct
+  namespace: default

@@ -1,0 +1,27 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kviewer-deploy
+  labels:
+    app: kviewer
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kviewer
+  template:
+    metadata:
+      labels:
+        version: alphav1
+        app: kviewer
+    spec:
+      serviceAccountName: kviewer-acct
+      containers:
+      - name: kviewer-svr
+        image: robertireton/kviewer
+        ports:
+        - containerPort: 8088
+        resources:
+          limits:
+            memory: 256Mi
+            cpu: 0.5

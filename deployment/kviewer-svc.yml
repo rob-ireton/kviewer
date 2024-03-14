@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: kviewer-svc
+spec:
+  selector:
+    app: kviewer
+  ports:
+    - port: 8088
+      targetPort: 8088
+  type: ClusterIP
