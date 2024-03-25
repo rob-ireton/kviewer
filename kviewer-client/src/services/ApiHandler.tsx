@@ -16,10 +16,15 @@ class ApiHandler {
                 headers,
                 body,
             });
+            
             try {
                 let data = await httpResponse.json();
-                console.log(data.result);
-                httpResponse.data = data.result;
+                if (data.error === "ok"){
+                    httpResponse.data = data.result;
+                } else {
+                    console.log("Error in API response");
+                    httpResponse.data = "";
+                }
             } catch (ex) {
                 console.log(ex);
             }
@@ -34,9 +39,21 @@ class ApiHandler {
         return await this.baseFetch(path, {});
     }
 
-    // Channels
+    // Pods
     async listPods() {
         const url = `/api/pods/`;
+        return await this.getObject(url);
+    }
+
+    // Events
+    async listCurrentEvents() {
+        const url = `/api/events/`;
+        return await this.getObject(url);
+    }
+    
+    // Deployments
+    async listDeployments() {
+        const url = `/api/deployments/`;
         return await this.getObject(url);
     }
 }

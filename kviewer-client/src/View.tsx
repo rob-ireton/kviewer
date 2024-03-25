@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { Button } from 'antd';
 import Canvas from './Canvas';
 import ApiHandler from './services/ApiHandler';
@@ -30,14 +30,21 @@ const View = ({ width, height }: ViewProps) => {
             }
         }, 1000);
  
-        //Clearing the interval
+        // Important to clear the interval
         return () => clearInterval(interval);
     }, [limit, markerSize]);
 
-    useEffect(() => {
-        const content = apiHandler.listPods();
-        console.log(content);
+    const refreshContent = useCallback(async () => {
+        const response = apiHandler.listPods();
+        // Resolve the promise and handle any errors
+        response
+            .then((data) => console.log(data.data))
+            .catch((error) => console.log(error));
     }, []);
+
+    useEffect(() => {
+        refreshContent();
+    }, [refreshContent]);
 
 
     return <>
