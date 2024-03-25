@@ -7,6 +7,12 @@ This is the repository for the Kviewer server mini-project. Its purpose is to ba
 2. Build the kviewer server using go commands
 
 
+# Building
+
+``docker build -t robertireton/kviewer:latest .``
+
+``docker push robertireton/kviewer``
+
 # Running
 ## Running locally
 
