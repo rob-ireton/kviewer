@@ -1,14 +1,38 @@
-import React, { useRef, useEffect, useCallback } from 'react';
+import React, { useRef, useState, useEffect, useCallback } from 'react';
+import {ApiResponse} from './services/ApiHandler';
+import ApiHandler from './services/ApiHandler';
 
 interface CanvasProps {
     width: number;
     height: number;
     markerSize: number;
-    pods: any[];
+    ascend: boolean;
 }
+const apiHandler = new ApiHandler();
 
-const Canvas = ({ width, height, markerSize, pods }: CanvasProps) => {
+const Canvas = ({ width, height, markerSize, ascend }: CanvasProps) => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
+    const [pods, setPods] = useState<any>([]);
+
+    const refreshContent = useCallback(async () => {
+        const response = apiHandler.listPods();
+        // Resolve the promise and handle any errors
+        response
+            .then((resp: ApiResponse) => {
+                setPods(resp.data);
+                // console.log(resp.data)
+            })
+            .catch((error) => console.log(error));
+    }, [setPods]);
+
+    useEffect(() => {
+        const interval = setInterval(() => {
+            refreshContent();
+        }, 3000);
+ 
+        // Important to clear the interval
+        return () => clearInterval(interval);
+    }, [refreshContent]);
 
     const drawGrid = useCallback((ctx: any) => {
         for (let i = 0; i < width; i+=50) {
@@ -81,18 +105,18 @@ const Canvas = ({ width, height, markerSize, pods }: CanvasProps) => {
 
     const getGradiants = useCallback((durationMinutes: number) => {
         // Divide duration minutes by width
-        return Math.round(durationMinutes/width);
+        return Math.round(durationMinutes/ (width-100));
     }, [width]);
 
-    const drawCircle = useCallback((ctx: any) => {
-        ctx.beginPath();
-        ctx.arc(50, 50, 5+markerSize, 0, 2 * Math.PI);
-        ctx.fillStyle = 'red';
-        ctx.lineWidth = 5;
-        ctx.strokeStyle = '#003300';
-        ctx.stroke();
-        ctx.fill();
-        ctx.closePath();
+    const drawContent = useCallback((ctx: any) => {
+        // ctx.beginPath();
+        // ctx.arc(50, 50, 5+markerSize, 0, 2 * Math.PI);
+        // ctx.fillStyle = 'red';
+        // ctx.lineWidth = 5;
+        // ctx.strokeStyle = '#003300';
+        // ctx.stroke();
+        // ctx.fill();
+        // ctx.closePath();
 
         const timePods = getEarliestAndLatestPods();
         if(timePods.length > 0){
@@ -103,10 +127,17 @@ const Canvas = ({ width, height, markerSize, pods }: CanvasProps) => {
             // console.log(`Each pixel is ${gradiants} many minutes`);
 
 
-            // let timeOfLatestPod = new Date(timePods[0].startTime).getTime()/1000;
-            let timeOfLatestPod = new Date(timePods[1].startTime).getTime()/1000; //THIS IS THE ORIGINAL
-            timeOfLatestPod /= 60;
-            timeOfLatestPod = Math.abs(Math.round(timeOfLatestPod));
+            // timeOfDeltaPod is the time of the latest pod or earliest pod depending on the ascend flag
+            let timeOfDeltaPod = 0;
+            if (ascend){
+                timeOfDeltaPod = new Date(timePods[0].startTime).getTime()/1000;
+            }
+            else {
+                timeOfDeltaPod = new Date(timePods[1].startTime).getTime()/1000;
+            }
+
+            timeOfDeltaPod /= 60;
+            timeOfDeltaPod = Math.abs(Math.round(timeOfDeltaPod));
 
             let offset = 50, y = 50, textY = 100;
             pods.forEach((pod: any) => {
@@ -119,14 +150,19 @@ const Canvas = ({ width, height, markerSize, pods }: CanvasProps) => {
                 // console.log(`Time of pod is ${timeOfPod} minutes`);
                 // console.log(`Pod is this many minutes - latest ${Math.round(timeOfLatestPod - timeOfPod)} minutes`);
 
-                // let x = Math.round((timeOfPod - timeOfLatestPod) / gradiants) + offset;
-                let x = Math.round((timeOfLatestPod - timeOfPod) / gradiants) + offset; /// THIS IS THE ORIGINAL
+                let x = 0;
+                if (ascend){
+                    x = Math.round((timeOfPod - timeOfDeltaPod) / gradiants) + offset;
+                } else {
+                    x = Math.round((timeOfDeltaPod - timeOfPod) / gradiants) + offset;
+                }
+                console.log(`Pod is ${x} on axis`);
+
                 if (x > width){
                     // Rounding may push it over the width
                     x = width - 50;
+                    console.log(`Pod is trimmed ${x} on axis`);
                 }
-
-                // console.log(`Pod is ${x} on axis`);
 
                 ctx.arc(x, y, 5, 0, 2 * Math.PI);
                 ctx.fillStyle = 'blue';
@@ -138,7 +174,7 @@ const Canvas = ({ width, height, markerSize, pods }: CanvasProps) => {
 
                 // By not beginning a new path, a happy little accident means we have a pointer line to the text
                 // ctx.beginPath();
-                ctx.arc(x, textY, 5, 0, 2 * Math.PI);
+                ctx.arc(x, textY, markerSize, 0, 2 * Math.PI);
                 ctx.fillStyle = 'blue';
                 ctx.lineWidth = 1;
                 ctx.strokeStyle = '#003300';
@@ -160,7 +196,7 @@ const Canvas = ({ width, height, markerSize, pods }: CanvasProps) => {
         ctx.strokeStyle = '#003300';
         ctx.stroke();
         ctx.closePath();
-    },[markerSize, width, pods, getEarliestAndLatestPods, dateDiff, getGradiants]);
+    },[ascend, markerSize, width, pods, getEarliestAndLatestPods, dateDiff, getGradiants]);
 
 
     useEffect(() => {
@@ -172,9 +208,9 @@ const Canvas = ({ width, height, markerSize, pods }: CanvasProps) => {
             }
             ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height)
             drawGrid(ctx)
-            drawCircle(ctx)
+            drawContent(ctx)
         }       
-    },[markerSize, width, drawCircle, drawGrid]);
+    },[markerSize, width, drawContent, drawGrid]);
 
     return <>
         <canvas ref={canvasRef} height={height} width={width} />
@@ -185,7 +221,7 @@ Canvas.defaultProps = {
     width: window.innerWidth,
     height: window.innerHeight,
     markerSize: 0,
-    pods: []
+    ascend: true,
 };
 
 export default Canvas;
