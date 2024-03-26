@@ -1,6 +1,6 @@
 
 interface ApiResponse extends Response{
-    data?: string;
+    data?: []
 }
 class ApiHandler {
     async baseFetch(path: string, { method = 'GET', body = undefined, setContentType = true }) {
@@ -23,7 +23,7 @@ class ApiHandler {
                     httpResponse.data = data.result;
                 } else {
                     console.log("Error in API response");
-                    httpResponse.data = "";
+                    httpResponse.data = [];
                 }
             } catch (ex) {
                 console.log(ex);
@@ -59,3 +59,4 @@ class ApiHandler {
 }
 
 export default ApiHandler;
+export type {ApiResponse};
