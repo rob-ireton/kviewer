@@ -14,6 +14,9 @@ Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
 The page will reload if you make edits.\
 You will also see any lint errors in the console.
 
+IMPORTANT
+To run the kviewer via the reverse proxy configured (from nginx in my repo), the URL should be http://localhost:8888
+
 ### `npm test`
 
 Launches the test runner in the interactive watch mode.\
