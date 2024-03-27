@@ -3,16 +3,29 @@ import {ApiResponse} from './services/ApiHandler';
 import ApiHandler from './services/ApiHandler';
 
 interface CanvasProps {
-    width: number;
-    height: number;
     markerSize: number;
     ascend: boolean;
 }
 const apiHandler = new ApiHandler();
 
-const Canvas = ({ width, height, markerSize, ascend }: CanvasProps) => {
+const Canvas = ({ markerSize, ascend }: CanvasProps) => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const [pods, setPods] = useState<any>([]);
+
+    const gridSpacing = 50;
+
+    const [canvasSize, setCanvasSize] = useState({
+        width: window.innerWidth,
+        height: window.innerHeight})
+
+    useEffect(() => {
+        const handleResize = () => setCanvasSize({
+            width: window.innerWidth,
+            height: window.innerHeight
+        })
+        window.addEventListener("resize", handleResize)
+        return () => window.removeEventListener("resize", handleResize)
+      }, [])
 
     const refreshContent = useCallback(async () => {
         const response = apiHandler.listPods();
@@ -35,28 +48,28 @@ const Canvas = ({ width, height, markerSize, ascend }: CanvasProps) => {
     }, [refreshContent]);
 
     const drawGrid = useCallback((ctx: any) => {
-        for (let i = 0; i < width; i+=50) {
+        for (let i = 0; i < canvasSize.width; i+=gridSpacing) {
             ctx.beginPath();
             ctx.moveTo(i, 0);
-            ctx.lineTo(i, height);
+            ctx.lineTo(i, canvasSize.height);
             ctx.lineWidth = 1;
             ctx.strokeStyle = 'rgba(0,125,0,0.35)';
             ctx.stroke();
             ctx.closePath();
         }
-        for (let i = 0; i < height; i+=50) {
+        for (let i = 0; i < canvasSize.height; i+=gridSpacing) {
             ctx.beginPath();
             ctx.moveTo(0, i);
-            ctx.lineTo(width, i);
+            ctx.lineTo(canvasSize.width, i);
             ctx.lineWidth = 1;
             ctx.strokeStyle = 'rgba(0,125,0,0.3)';
             ctx.stroke();
             ctx.closePath();
         }
-    },[height, width]);
+    },[canvasSize.height, canvasSize.width]);
 
     const getEarliestAndLatestPods = useCallback(() => {
-        if(pods.length > 0){    
+        if(pods && pods.length > 0){    
             let earliestPod = pods[0];
             let earliestTime = new Date(earliestPod.startTime);
             let latestPod = pods[0];
@@ -105,20 +118,14 @@ const Canvas = ({ width, height, markerSize, ascend }: CanvasProps) => {
 
     const getGradiants = useCallback((durationMinutes: number) => {
         // Divide duration minutes by width
-        return Math.round(durationMinutes/ (width-100));
-    }, [width]);
+        return Math.round(durationMinutes/ (canvasSize.width-100));
+    }, [canvasSize.width]);
 
     const drawContent = useCallback((ctx: any) => {
-        // ctx.beginPath();
-        // ctx.arc(50, 50, 5+markerSize, 0, 2 * Math.PI);
-        // ctx.fillStyle = 'red';
-        // ctx.lineWidth = 5;
-        // ctx.strokeStyle = '#003300';
-        // ctx.stroke();
-        // ctx.fill();
-        // ctx.closePath();
-
         const timePods = getEarliestAndLatestPods();
+
+        const xOffset = 50, yOffset = 50;
+
         if(timePods.length > 0){
             const durationMinutes = dateDiff(new Date(timePods[0].startTime), new Date(timePods[1].startTime));
             // console.log("Duration is " + durationMinutes + " minutes");
@@ -139,7 +146,7 @@ const Canvas = ({ width, height, markerSize, ascend }: CanvasProps) => {
             timeOfDeltaPod /= 60;
             timeOfDeltaPod = Math.abs(Math.round(timeOfDeltaPod));
 
-            let offset = 50, y = 50, textY = 100;
+            let textY = 100;
             pods.forEach((pod: any) => {
                 ctx.beginPath();
 
@@ -152,19 +159,19 @@ const Canvas = ({ width, height, markerSize, ascend }: CanvasProps) => {
 
                 let x = 0;
                 if (ascend){
-                    x = Math.round((timeOfPod - timeOfDeltaPod) / gradiants) + offset;
+                    x = Math.round((timeOfPod - timeOfDeltaPod) / gradiants) + xOffset;
                 } else {
-                    x = Math.round((timeOfDeltaPod - timeOfPod) / gradiants) + offset;
+                    x = Math.round((timeOfDeltaPod - timeOfPod) / gradiants) + xOffset;
                 }
                 console.log(`Pod is ${x} on axis`);
 
-                if (x > width){
+                if (x > canvasSize.width){
                     // Rounding may push it over the width
-                    x = width - 50;
+                    x = canvasSize.width - xOffset;
                     console.log(`Pod is trimmed ${x} on axis`);
                 }
 
-                ctx.arc(x, y, 5, 0, 2 * Math.PI);
+                ctx.arc(x, yOffset, 5, 0, 2 * Math.PI);
                 ctx.fillStyle = 'blue';
                 ctx.lineWidth = 1;
                 ctx.strokeStyle = '#003300';
@@ -183,20 +190,24 @@ const Canvas = ({ width, height, markerSize, ascend }: CanvasProps) => {
                 ctx.closePath();
 
                 ctx.font = "12px Arial";
-                ctx.fillText(pod.name, x+10, textY);
-                textY+=50;
+                let textX = x +10;
+                // if (x > canvasSize.width - 100){
+                //     textX = x - 100;
+                // }
+                ctx.fillText(pod.name, textX, textY);
+                textY+=yOffset;
             })
         }
 
         // Timeline
         ctx.beginPath();
-        ctx.moveTo(50, 50);
-        ctx.lineTo(width - 50, 50);
+        ctx.moveTo(xOffset, yOffset);
+        ctx.lineTo(canvasSize.width - xOffset, yOffset);
         ctx.lineWidth = 2;
         ctx.strokeStyle = '#003300';
         ctx.stroke();
         ctx.closePath();
-    },[ascend, markerSize, width, pods, getEarliestAndLatestPods, dateDiff, getGradiants]);
+    },[ascend, markerSize, canvasSize.width, pods, getEarliestAndLatestPods, dateDiff, getGradiants]);
 
 
     useEffect(() => {
@@ -210,16 +221,14 @@ const Canvas = ({ width, height, markerSize, ascend }: CanvasProps) => {
             drawGrid(ctx)
             drawContent(ctx)
         }       
-    },[markerSize, width, drawContent, drawGrid]);
+    },[markerSize, canvasSize.width, drawContent, drawGrid]);
 
     return <>
-        <canvas ref={canvasRef} height={height} width={width} />
+        <canvas ref={canvasRef} height={canvasSize.height} width={canvasSize.width} />
     </>;
 };
 
 Canvas.defaultProps = {
-    width: window.innerWidth,
-    height: window.innerHeight,
     markerSize: 0,
     ascend: true,
 };

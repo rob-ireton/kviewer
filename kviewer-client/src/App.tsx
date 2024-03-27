@@ -46,8 +46,9 @@ reverse();
 const App: React.FC = () => {
 
   return <div className="App">
-    <View height={window.innerHeight} width={window.innerWidth}/>
+    <View />
   </div>
 };
 
 export default App;
+
