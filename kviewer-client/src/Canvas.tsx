@@ -116,15 +116,15 @@ const Canvas = ({ markerSize, ascend }: CanvasProps) => {
         return durationMinutes;    
     },[]);
 
+    const xOffset = 50, yOffset = 50;
+
     const getGradiants = useCallback((durationMinutes: number) => {
         // Divide duration minutes by width
-        return Math.round(durationMinutes/ (canvasSize.width-100));
+        return Math.round(durationMinutes/ (canvasSize.width-(xOffset*2)));
     }, [canvasSize.width]);
 
     const drawContent = useCallback((ctx: any) => {
         const timePods = getEarliestAndLatestPods();
-
-        const xOffset = 50, yOffset = 50;
 
         if(timePods.length > 0){
             const durationMinutes = dateDiff(new Date(timePods[0].startTime), new Date(timePods[1].startTime));
@@ -192,11 +192,42 @@ const Canvas = ({ markerSize, ascend }: CanvasProps) => {
                 ctx.font = "12px Arial";
                 let textX = x +10;
                 // if (x > canvasSize.width - 100){
+                // Trim the text if it goes off the canvas
                 //     textX = x - 100;
                 // }
                 ctx.fillText(pod.name, textX, textY);
                 textY+=yOffset;
             })
+
+            // Put time markers on the timeline
+            let timeMarkerDate = new Date(timeOfDeltaPod*60*1000);
+            let timeMarkerX = xOffset;
+            let altYPos = false;
+            while (timeMarkerX < canvasSize.width - xOffset){
+                ctx.beginPath();
+                ctx.moveTo(timeMarkerX, yOffset);
+                ctx.lineTo(timeMarkerX, yOffset-10);
+                ctx.lineWidth = 1;
+                ctx.strokeStyle = '#003300';
+                ctx.stroke();
+                ctx.closePath();
+
+                ctx.font = "9px Arial";
+                let yAlt = altYPos ? 20 : 0;
+                ctx.fillText(timeMarkerDate.toLocaleDateString(), timeMarkerX-10, yOffset-15-yAlt);
+
+                // Increment the timeMarker by the gradiants
+                // timeMarker is the x-axis time marker so we subtract the offset. Then for each pixel
+                // multiply the gradiants to get the time in minutes. Then into milliseconds.
+                if(!ascend){
+                    timeMarkerDate = new Date(timeMarkerDate.getTime() + ((timeMarkerX-xOffset *gradiants)*60*1000));
+                }
+                else {
+                    timeMarkerDate = new Date(timeMarkerDate.getTime() - ((timeMarkerX-xOffset *gradiants)*60*1000));
+                }
+                altYPos = !altYPos;
+                timeMarkerX += gradiants;
+            }
         }
 
         // Timeline
