@@ -34,6 +34,7 @@ const Canvas = ({ markerSize, ascend }: CanvasProps) => {
         tooltipRegions.current.push(newRegion);
     },[]);
 
+    // This useEffect is for the window resize event
     useEffect(() => {
         const handleResize = () => setCanvasSize({
             width: window.innerWidth,
@@ -43,6 +44,7 @@ const Canvas = ({ markerSize, ascend }: CanvasProps) => {
         return () => window.removeEventListener("resize", handleResize)
       }, [])
 
+    // This is the actual function that will be called to refresh the content via server
     const refreshContent = useCallback(async () => {
         const response = apiHandler.listPods();
         // Resolve the promise and handle any errors
@@ -54,6 +56,7 @@ const Canvas = ({ markerSize, ascend }: CanvasProps) => {
             .catch((error) => console.log(error));
     }, [setPods]);
 
+    // This useEffect is for the refresh of content
     useEffect(() => {
         const interval = setInterval(() => {
             refreshContent();
@@ -318,18 +321,28 @@ const Canvas = ({ markerSize, ascend }: CanvasProps) => {
                     ctx.beginPath();
                     ctx.font = "20px georgia";
                     //TODO make this multi-line
-                    const txt = `${foundRegion.contentRef.name} ${foundRegion.contentRef.startTime}`;
+                    // const txt = `${foundRegion.contentRef.name}`;
+                    const txt = `${foundRegion.contentRef.name}${foundRegion.contentRef.startTime}`;
                     ctx.fillStyle = "white";
                     ctx.lineWidth = 1;
                     ctx.strokeStyle = "black";
-                    ctx.rect(foundRegion.x, foundRegion.y -20, ctx.measureText(txt).width, 24);
+
+                    // Adjust the tooltip if it goes off the canvas
+                    const tooltipWidth = ctx.measureText(txt).width;
+                    let tooltipX = foundRegion.x;
+                    if (tooltipX + tooltipWidth > canvasSize.width){
+                        const adjust = tooltipX + tooltipWidth - canvasSize.width;
+                        tooltipX -= adjust + gridSpacing;
+                    }
+
+                    ctx.rect(tooltipX, foundRegion.y -20, tooltipWidth, 24);
                     ctx.fill();
                     ctx.stroke();
                     ctx.closePath();
 
                     ctx.beginPath();    
                     ctx.fillStyle = "blue";
-                    ctx.fillText(txt, foundRegion.x, foundRegion.y); // Draw text
+                    ctx.fillText(txt, tooltipX, foundRegion.y); // Draw text
                     ctx.closePath();
                 }
                 else {
@@ -351,7 +364,7 @@ const Canvas = ({ markerSize, ascend }: CanvasProps) => {
             };
         }
         
-    },[toolTipDisplayed, setRequireRedraw]);
+    },[toolTipDisplayed, setRequireRedraw, canvasSize.width, setTooltipDisplayed, markerSize]);
 
     useEffect(() => {
         if(requireRedraw){
