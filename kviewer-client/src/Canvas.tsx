@@ -11,12 +11,28 @@ const apiHandler = new ApiHandler();
 const Canvas = ({ markerSize, ascend }: CanvasProps) => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const [pods, setPods] = useState<any>([]);
+    const [toolTipDisplayed, setTooltipDisplayed] = useState<boolean>(false);
+    const [requireRedraw, setRequireRedraw] = useState<boolean>(false);
+    const [canvasSize, setCanvasSize] = useState({width: window.innerWidth, height: window.innerHeight})
+
+    interface TooltipRegion {
+        x: number;
+        y: number;
+        width: number;
+        height: number;
+        contentRef: any;
+    }
+    const tooltipRegions = useRef<TooltipRegion[]>([]);
 
     const gridSpacing = 50;
 
-    const [canvasSize, setCanvasSize] = useState({
-        width: window.innerWidth,
-        height: window.innerHeight})
+    const resetTooltipRegions = useCallback(() => {
+        tooltipRegions.current = [];
+    },[]);
+
+    const updateTooltipRegions = useCallback((newRegion: TooltipRegion) => {
+        tooltipRegions.current.push(newRegion);
+    },[]);
 
     useEffect(() => {
         const handleResize = () => setCanvasSize({
@@ -41,7 +57,7 @@ const Canvas = ({ markerSize, ascend }: CanvasProps) => {
     useEffect(() => {
         const interval = setInterval(() => {
             refreshContent();
-        }, 3000);
+        }, 5000);
  
         // Important to clear the interval
         return () => clearInterval(interval);
@@ -127,6 +143,8 @@ const Canvas = ({ markerSize, ascend }: CanvasProps) => {
         const timePods = getEarliestAndLatestPods();
 
         if(timePods.length > 0){
+            resetTooltipRegions();
+
             const durationMinutes = dateDiff(new Date(timePods[0].startTime), new Date(timePods[1].startTime));
             // console.log("Duration is " + durationMinutes + " minutes");
 
@@ -165,12 +183,6 @@ const Canvas = ({ markerSize, ascend }: CanvasProps) => {
                 }
                 console.log(`Pod is ${x} on axis`);
 
-                if (x > canvasSize.width){
-                    // Rounding may push it over the width
-                    x = canvasSize.width - xOffset;
-                    console.log(`Pod is trimmed ${x} on axis`);
-                }
-
                 ctx.arc(x, yOffset, 5, 0, 2 * Math.PI);
                 ctx.fillStyle = 'blue';
                 ctx.lineWidth = 1;
@@ -192,13 +204,18 @@ const Canvas = ({ markerSize, ascend }: CanvasProps) => {
                 ctx.font = "12px Arial";
                 let textX = x +10;
                 let markerText = pod.name;
-                let markerTextWidth = ctx.measureText(markerText).width;
+                let metrics = ctx.measureText(markerText);
+                let markerTextWidth = metrics.width;
+                let markerTextHeight = metrics.fontBoundingBoxAscent + metrics.fontBoundingBoxDescent;
 
                 // If the text will go off the canvas, move it to the left of the marker
                 if (textX + markerTextWidth > canvasSize.width){
                     textX = x - markerTextWidth - markerSize;
                 }
                 ctx.fillText(pod.name, textX, textY);
+
+                updateTooltipRegions({x: textX, y: textY, width: markerTextWidth, height: markerTextHeight, contentRef: pod});
+
                 textY+=yOffset;
             })
 
@@ -241,7 +258,7 @@ const Canvas = ({ markerSize, ascend }: CanvasProps) => {
         ctx.strokeStyle = '#003300';
         ctx.stroke();
         ctx.closePath();
-    },[ascend, markerSize, canvasSize.width, pods, getEarliestAndLatestPods, dateDiff, getGradiants]);
+    },[ascend, markerSize, canvasSize.width, pods, getEarliestAndLatestPods, dateDiff, getGradiants, updateTooltipRegions, resetTooltipRegions]);
 
 
     useEffect(() => {
@@ -281,27 +298,45 @@ const Canvas = ({ markerSize, ascend }: CanvasProps) => {
             // clear();
             // drawrect();
 
+            const mouseInTooltipRegions = (x: number, y: number) => {
+                return tooltipRegions.current.find((region: TooltipRegion) => {
+                    return x > region.x && x < region.x + region.width &&
+                       y > (region.y - region.height) && y < region.y;
+                }
+            )};
+
             const mouseMove = (event: any) => {
                 const x = event.offsetX;
                 const y = event.offsetY;
-                
-                if (x > 50 && x < 250 &&
-                    y > 50 && y < 150) { // If mouse x and y are inside rectangle
+                const foundRegion = mouseInTooltipRegions(x,y);
+
+                const alreadyShowingToolip = toolTipDisplayed;
+
+                if (foundRegion) { // If mouse x and y are inside rectangle          
+                    setTooltipDisplayed(true);
+
                     ctx.beginPath();
                     ctx.font = "20px georgia";
-                    const txt = "Hello there!";
+                    //TODO make this multi-line
+                    const txt = `${foundRegion.contentRef.name} ${foundRegion.contentRef.startTime}`;
                     ctx.fillStyle = "white";
                     ctx.lineWidth = 1;
                     ctx.strokeStyle = "black";
-                    ctx.rect(200, 180, ctx.measureText(txt).width, 24);
+                    ctx.rect(foundRegion.x, foundRegion.y -20, ctx.measureText(txt).width, 24);
                     ctx.fill();
                     ctx.stroke();
                     ctx.closePath();
 
                     ctx.beginPath();    
                     ctx.fillStyle = "blue";
-                    ctx.fillText(txt, 200, 200); // Draw text
+                    ctx.fillText(txt, foundRegion.x, foundRegion.y); // Draw text
                     ctx.closePath();
+                }
+                else {
+                    setTooltipDisplayed(false);
+                    if (alreadyShowingToolip){
+                        setRequireRedraw(true);
+                    }
                 }
             };
 
@@ -316,7 +351,25 @@ const Canvas = ({ markerSize, ascend }: CanvasProps) => {
             };
         }
         
-    },[]);
+    },[toolTipDisplayed, setRequireRedraw]);
+
+    useEffect(() => {
+        if(requireRedraw){
+            console.log("Invalidate rect");
+            // Clear the canvas and redraw
+            if (canvasRef.current) {
+                const canvas = canvasRef.current;
+                const ctx = canvas.getContext('2d');
+                if (ctx == null) {
+                    throw new Error('Could not get context');
+                }
+                ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height)
+                drawGrid(ctx);
+                drawContent(ctx);
+            }
+        }
+        setRequireRedraw(false);
+    }, [requireRedraw, setRequireRedraw, drawGrid, drawContent]);
 
     return <>
         <canvas ref={canvasRef} height={canvasSize.height} width={canvasSize.width} />
