@@ -191,10 +191,13 @@ const Canvas = ({ markerSize, ascend }: CanvasProps) => {
 
                 ctx.font = "12px Arial";
                 let textX = x +10;
-                // if (x > canvasSize.width - 100){
-                // Trim the text if it goes off the canvas
-                //     textX = x - 100;
-                // }
+                let markerText = pod.name;
+                let markerTextWidth = ctx.measureText(markerText).width;
+
+                // If the text will go off the canvas, move it to the left of the marker
+                if (textX + markerTextWidth > canvasSize.width){
+                    textX = x - markerTextWidth - markerSize;
+                }
                 ctx.fillText(pod.name, textX, textY);
                 textY+=yOffset;
             })
@@ -253,6 +256,67 @@ const Canvas = ({ markerSize, ascend }: CanvasProps) => {
             drawContent(ctx)
         }       
     },[markerSize, canvasSize.width, drawContent, drawGrid]);
+
+    // This useEffect is for the mouse move event to create a tooltip
+    // TODO currently the tooltip will be removed by the re-render after each poll interval
+    // so once that is fixed, the tooltip will need to be removed by a timeout and figure out
+    // how to delete it when the mouse moves off the area - maybe a full redraw?
+    useEffect(() => {
+        if (canvasRef.current) {
+            const canvas = canvasRef.current;
+            const ctx = canvas.getContext('2d');
+            if (ctx == null) {
+                throw new Error('Could not get context');
+            }
+            // function clear() { // Clears screen to prevent smearing
+            //     ctx.fillStyle = "white";
+            //     ctx.fillRect(0, 0, 500, 250);
+            // }
+
+            // function drawrect() { // Draws rectangle
+            //     ctx.fillStyle = "gray";
+            //     ctx.fillRect(50, 50, 200, 100);
+            // }
+
+            // clear();
+            // drawrect();
+
+            const mouseMove = (event: any) => {
+                const x = event.offsetX;
+                const y = event.offsetY;
+                
+                if (x > 50 && x < 250 &&
+                    y > 50 && y < 150) { // If mouse x and y are inside rectangle
+                    ctx.beginPath();
+                    ctx.font = "20px georgia";
+                    const txt = "Hello there!";
+                    ctx.fillStyle = "white";
+                    ctx.lineWidth = 1;
+                    ctx.strokeStyle = "black";
+                    ctx.rect(200, 180, ctx.measureText(txt).width, 24);
+                    ctx.fill();
+                    ctx.stroke();
+                    ctx.closePath();
+
+                    ctx.beginPath();    
+                    ctx.fillStyle = "blue";
+                    ctx.fillText(txt, 200, 200); // Draw text
+                    ctx.closePath();
+                }
+            };
+
+            canvasRef.current && canvasRef.current.addEventListener("mousemove", mouseMove);
+
+            // The clean up ref needs to be assigned to a variable to be used in the return function
+            // which is a clean up function the useEffect hook will call when the component is unmounted
+            const cleanUp = canvasRef.current;
+            
+            return () => {
+                cleanUp && cleanUp.removeEventListener('mousemove', mouseMove);
+            };
+        }
+        
+    },[]);
 
     return <>
         <canvas ref={canvasRef} height={canvasSize.height} width={canvasSize.width} />
