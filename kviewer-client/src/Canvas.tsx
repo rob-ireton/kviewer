@@ -319,29 +319,40 @@ const Canvas = ({ markerSize, ascend }: CanvasProps) => {
 
                     ctx.beginPath();
                     ctx.font = "20px georgia";
-                    //TODO make this multi-line
-                    // const txt = `${foundRegion.contentRef.name}`;
-                    const txt = `${foundRegion.contentRef.name}${foundRegion.contentRef.startTime}`;
+                    
+                    // Multi-line tooltips are split by newline
+                    const txt = `${foundRegion.contentRef.name}\n${foundRegion.contentRef.startTime}`;
+
+                    const txtLines = txt.split('\n');
+                    let maxTxtWidth = 0;
+                    txtLines.forEach((line) => {
+                        const lineWidth = ctx.measureText(line).width;
+                        if (lineWidth > maxTxtWidth){
+                            maxTxtWidth = lineWidth;
+                        }
+                    });
+
                     ctx.fillStyle = "white";
                     ctx.lineWidth = 1;
                     ctx.strokeStyle = "black";
 
                     // Adjust the tooltip if it goes off the canvas
-                    const tooltipWidth = ctx.measureText(txt).width;
                     let tooltipX = foundRegion.x;
-                    if (tooltipX + tooltipWidth > canvasSize.width){
-                        const adjust = tooltipX + tooltipWidth - canvasSize.width;
+                    if (tooltipX + maxTxtWidth > canvasSize.width){
+                        const adjust = tooltipX + maxTxtWidth - canvasSize.width;
                         tooltipX -= adjust + xOffset;
                     }
 
-                    ctx.rect(tooltipX, foundRegion.y -20, tooltipWidth, 24);
+                    ctx.rect(tooltipX, foundRegion.y -20, maxTxtWidth, 24 * txtLines.length);
                     ctx.fill();
                     ctx.stroke();
                     ctx.closePath();
 
                     ctx.beginPath();    
                     ctx.fillStyle = "blue";
-                    ctx.fillText(txt, tooltipX, foundRegion.y); // Draw text
+                    for (let i = 0; i < txtLines.length; i++){
+                        ctx.fillText(txtLines[i], tooltipX, foundRegion.y + (i*24)); // Draw text
+                    }
                     ctx.closePath();
                 }
                 else {
