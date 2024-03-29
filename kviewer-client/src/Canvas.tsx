@@ -216,8 +216,8 @@ const Canvas = ({ markerSize, ascend }: CanvasProps) => {
                 let markerTextWidth = metrics.width;
                 let markerTextHeight = metrics.fontBoundingBoxAscent + metrics.fontBoundingBoxDescent;
 
-                // If the text will go off the canvas, move it to the left of the marker
-                if (textX + markerTextWidth > canvasSize.width){
+                // If the text will go off the canvas or the offset, move it to the left of the marker
+                if (textX + markerTextWidth > canvasSize.width - xOffset){
                     textX = x - markerTextWidth - markerSize;
                 }
                 ctx.fillText(pod.name, textX, textY);
@@ -288,9 +288,8 @@ const Canvas = ({ markerSize, ascend }: CanvasProps) => {
     },[markerSize, canvasSize.width, redraw]);
 
     // This useEffect is for the mouse move event to create a tooltip
-    // TODO currently the tooltip will be removed by the re-render after each poll interval
-    // so once that is fixed, the tooltip will need to be removed by a timeout and figure out
-    // how to delete it when the mouse moves off the area - maybe a full redraw?
+    // The tooltip will be displayed if the registered regions of text are hovered over
+    // and when existing, the tooltip will be removed by a full redraw request
     useEffect(() => {
         if (canvasRef.current) {
             const canvas = canvasRef.current;
@@ -298,19 +297,8 @@ const Canvas = ({ markerSize, ascend }: CanvasProps) => {
             if (ctx == null) {
                 throw new Error('Could not get context');
             }
-            // function clear() { // Clears screen to prevent smearing
-            //     ctx.fillStyle = "white";
-            //     ctx.fillRect(0, 0, 500, 250);
-            // }
 
-            // function drawrect() { // Draws rectangle
-            //     ctx.fillStyle = "gray";
-            //     ctx.fillRect(50, 50, 200, 100);
-            // }
-
-            // clear();
-            // drawrect();
-
+            // Register the regions of text that will have tooltips
             const mouseInTooltipRegions = (x: number, y: number) => {
                 return tooltipRegions.current.find((region: TooltipRegion) => {
                     return x > region.x && x < region.x + region.width &&
@@ -325,7 +313,8 @@ const Canvas = ({ markerSize, ascend }: CanvasProps) => {
 
                 const alreadyShowingToolip = toolTipDisplayed;
 
-                if (foundRegion) { // If mouse x and y are inside rectangle          
+                if (foundRegion) {
+                    // If mouse x and y are inside rectangle          
                     setTooltipDisplayed(true);
 
                     ctx.beginPath();
@@ -342,7 +331,7 @@ const Canvas = ({ markerSize, ascend }: CanvasProps) => {
                     let tooltipX = foundRegion.x;
                     if (tooltipX + tooltipWidth > canvasSize.width){
                         const adjust = tooltipX + tooltipWidth - canvasSize.width;
-                        tooltipX -= adjust + gridSpacing;
+                        tooltipX -= adjust + xOffset;
                     }
 
                     ctx.rect(tooltipX, foundRegion.y -20, tooltipWidth, 24);
