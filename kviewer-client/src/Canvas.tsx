@@ -50,11 +50,15 @@ const Canvas = ({ markerSize, ascend }: CanvasProps) => {
         // Resolve the promise and handle any errors
         response
             .then((resp: ApiResponse) => {
-                setPods(resp.data);
-                // console.log(resp.data)
+                // If the arrays are different then update. This is a simple way to check for changes
+                // and update the state only when necessary.
+                if (JSON.stringify(pods) !== JSON.stringify(resp.data)){
+                    setPods(resp.data);
+                    console.log(resp.data)
+                }
             })
             .catch((error) => console.log(error));
-    }, [setPods]);
+    }, [setPods, pods]);
 
     // This useEffect is for the refresh of content
     useEffect(() => {
@@ -146,6 +150,8 @@ const Canvas = ({ markerSize, ascend }: CanvasProps) => {
         const timePods = getEarliestAndLatestPods();
 
         if(timePods.length > 0){
+            console.log("Drawing content");
+            
             resetTooltipRegions();
 
             const durationMinutes = dateDiff(new Date(timePods[0].startTime), new Date(timePods[1].startTime));
@@ -184,7 +190,7 @@ const Canvas = ({ markerSize, ascend }: CanvasProps) => {
                 } else {
                     x = Math.round((timeOfDeltaPod - timeOfPod) / gradiants) + xOffset;
                 }
-                console.log(`Pod is ${x} on axis`);
+                // console.log(`Pod is ${x} on axis`);
 
                 ctx.arc(x, yOffset, 5, 0, 2 * Math.PI);
                 ctx.fillStyle = 'blue';
@@ -366,6 +372,7 @@ const Canvas = ({ markerSize, ascend }: CanvasProps) => {
         
     },[toolTipDisplayed, setRequireRedraw, canvasSize.width, setTooltipDisplayed, markerSize]);
 
+     // The main purpose of this useEffect is to redraw the canvas when the tooltip is to be cleared
     useEffect(() => {
         if(requireRedraw){
             console.log("Invalidate rect");
