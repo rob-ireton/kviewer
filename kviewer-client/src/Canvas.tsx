@@ -151,7 +151,7 @@ const Canvas = ({ markerSize, ascend }: CanvasProps) => {
 
         if(timePods.length > 0){
             console.log("Drawing content");
-            
+
             resetTooltipRegions();
 
             const durationMinutes = dateDiff(new Date(timePods[0].startTime), new Date(timePods[1].startTime));
@@ -159,7 +159,6 @@ const Canvas = ({ markerSize, ascend }: CanvasProps) => {
 
             const gradiants = getGradiants(durationMinutes)
             // console.log(`Each pixel is ${gradiants} many minutes`);
-
 
             // timeOfDeltaPod is the time of the latest pod or earliest pod depending on the ascend flag
             let timeOfDeltaPod = 0;
@@ -269,8 +268,8 @@ const Canvas = ({ markerSize, ascend }: CanvasProps) => {
         ctx.closePath();
     },[ascend, markerSize, canvasSize.width, pods, getEarliestAndLatestPods, dateDiff, getGradiants, updateTooltipRegions, resetTooltipRegions]);
 
-
-    useEffect(() => {
+    // Main top level redraw to the canvas
+    const redraw = useCallback(() => {
         if (canvasRef.current) {
             const canvas = canvasRef.current;
             const ctx = canvas.getContext('2d');
@@ -278,10 +277,15 @@ const Canvas = ({ markerSize, ascend }: CanvasProps) => {
                 throw new Error('Could not get context');
             }
             ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height)
-            drawGrid(ctx)
-            drawContent(ctx)
-        }       
-    },[markerSize, canvasSize.width, drawContent, drawGrid]);
+            drawGrid(ctx);
+            drawContent(ctx);
+        }
+    },[drawGrid, drawContent]);
+
+    // useEffect canvas size and marksize changes
+    useEffect(() => {
+        redraw();
+    },[markerSize, canvasSize.width, redraw]);
 
     // This useEffect is for the mouse move event to create a tooltip
     // TODO currently the tooltip will be removed by the re-render after each poll interval
@@ -373,23 +377,14 @@ const Canvas = ({ markerSize, ascend }: CanvasProps) => {
     },[toolTipDisplayed, setRequireRedraw, canvasSize.width, setTooltipDisplayed, markerSize]);
 
      // The main purpose of this useEffect is to redraw the canvas when the tooltip is to be cleared
+     // which is a forced redraw after leaving the tooltip region
     useEffect(() => {
         if(requireRedraw){
             console.log("Invalidate rect");
-            // Clear the canvas and redraw
-            if (canvasRef.current) {
-                const canvas = canvasRef.current;
-                const ctx = canvas.getContext('2d');
-                if (ctx == null) {
-                    throw new Error('Could not get context');
-                }
-                ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height)
-                drawGrid(ctx);
-                drawContent(ctx);
-            }
+            redraw();
         }
         setRequireRedraw(false);
-    }, [requireRedraw, setRequireRedraw, drawGrid, drawContent]);
+    }, [requireRedraw, setRequireRedraw, redraw]);
 
     return <>
         <canvas ref={canvasRef} height={canvasSize.height} width={canvasSize.width} />
