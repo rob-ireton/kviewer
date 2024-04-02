@@ -87,12 +87,14 @@ const View = () => {
         switch (contentType) {
             case "pods":
                 setTimePropName("startTime");
+                refreshContent();
                 break
             case "deployments":
                 setTimePropName("creationTime");
+                refreshContent();
                 break;
         }
-    }, [contentType]);
+    }, [contentType, refreshContent]);
 
     // This useEffect is for the refresh of content
     useEffect(() => {
