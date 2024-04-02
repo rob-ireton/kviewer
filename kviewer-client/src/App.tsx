@@ -39,6 +39,16 @@ const reverse = () => {
     reversedArr.push(arr[i]);
   }
   console.log(reversedArr);
+
+  // reverse the array using for assignment
+  // let reversedArrAssign : Array<number> = [...arr];
+  // for (let i = 0; i <= Math.floor(arr.length / 2); i++) {
+  //   let temp = arr[i];
+  //   let temp2 = arr[arr.length - 1 - i];
+  //   reversedArrAssign[i] = temp2;
+  //   reversedArrAssign[arr.length - 1 - i] = temp;
+  // }
+  // console.log('TS array :' + reversedArrAssign);
 };
 
 reverse();

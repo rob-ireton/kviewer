@@ -1,16 +1,15 @@
 import React, { useRef, useState, useEffect, useCallback } from 'react';
-import {ApiResponse} from './services/ApiHandler';
-import ApiHandler from './services/ApiHandler';
 
 interface CanvasProps {
     markerSize: number;
     ascend: boolean;
+    contentArray?: any[],
+    getEarliestAndLatestContent: () => any[],
+    timePropName: string;
 }
-const apiHandler = new ApiHandler();
 
-const Canvas = ({ markerSize, ascend }: CanvasProps) => {
+const Canvas = ({ markerSize, ascend, contentArray, getEarliestAndLatestContent, timePropName }: CanvasProps) => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
-    const [pods, setPods] = useState<any>([]);
     const [toolTipDisplayed, setTooltipDisplayed] = useState<boolean>(false);
     const [requireRedraw, setRequireRedraw] = useState<boolean>(false);
     const [canvasSize, setCanvasSize] = useState({width: window.innerWidth, height: window.innerHeight})
@@ -44,32 +43,6 @@ const Canvas = ({ markerSize, ascend }: CanvasProps) => {
         return () => window.removeEventListener("resize", handleResize)
       }, [])
 
-    // This is the actual function that will be called to refresh the content via server
-    const refreshContent = useCallback(async () => {
-        const response = apiHandler.listPods();
-        // Resolve the promise and handle any errors
-        response
-            .then((resp: ApiResponse) => {
-                // If the arrays are different then update. This is a simple way to check for changes
-                // and update the state only when necessary.
-                if (JSON.stringify(pods) !== JSON.stringify(resp.data)){
-                    setPods(resp.data);
-                    console.log(resp.data)
-                }
-            })
-            .catch((error) => console.log(error));
-    }, [setPods, pods]);
-
-    // This useEffect is for the refresh of content
-    useEffect(() => {
-        const interval = setInterval(() => {
-            refreshContent();
-        }, 5000);
- 
-        // Important to clear the interval
-        return () => clearInterval(interval);
-    }, [refreshContent]);
-
     const drawGrid = useCallback((ctx: any) => {
         for (let i = 0; i < canvasSize.width; i+=gridSpacing) {
             ctx.beginPath();
@@ -90,28 +63,6 @@ const Canvas = ({ markerSize, ascend }: CanvasProps) => {
             ctx.closePath();
         }
     },[canvasSize.height, canvasSize.width]);
-
-    const getEarliestAndLatestPods = useCallback(() => {
-        if(pods && pods.length > 0){    
-            let earliestPod = pods[0];
-            let earliestTime = new Date(earliestPod.startTime);
-            let latestPod = pods[0];
-            let latestTime = new Date(latestPod.startTime);
-            pods.forEach((pod: any) => {
-                let podTime = new Date(pod.startTime);
-                if (podTime < earliestTime){
-                    earliestTime = podTime;
-                    earliestPod = pod;
-                }
-                if (podTime > latestTime){
-                    latestTime = podTime;
-                    latestPod = pod;
-                }
-            });
-            return [earliestPod, latestPod];
-        }
-        return [];        
-    },[pods]);
 
     const dateDiff = useCallback((earliest: Date, latest: Date) => {
         // Calculate the difference in milliseconds between the two provided dates and convert it to seconds
@@ -147,49 +98,49 @@ const Canvas = ({ markerSize, ascend }: CanvasProps) => {
     }, [canvasSize.width]);
 
     const drawContent = useCallback((ctx: any) => {
-        const timePods = getEarliestAndLatestPods();
+        const earlyAndLatest = getEarliestAndLatestContent();
 
-        if(timePods.length > 0){
+        if(contentArray && earlyAndLatest.length > 0){
             console.log("Drawing content");
 
             resetTooltipRegions();
 
-            const durationMinutes = dateDiff(new Date(timePods[0].startTime), new Date(timePods[1].startTime));
+            const durationMinutes = dateDiff(new Date(earlyAndLatest[0][timePropName]), new Date(earlyAndLatest[1][timePropName]));
             // console.log("Duration is " + durationMinutes + " minutes");
 
             const gradiants = getGradiants(durationMinutes)
             // console.log(`Each pixel is ${gradiants} many minutes`);
 
-            // timeOfDeltaPod is the time of the latest pod or earliest pod depending on the ascend flag
-            let timeOfDeltaPod = 0;
+            // timeOfDeltaItem is the time of the latest item or earliest item depending on the ascend flag
+            let timeOfDeltaItem = 0;
             if (ascend){
-                timeOfDeltaPod = new Date(timePods[0].startTime).getTime()/1000;
+                timeOfDeltaItem = new Date(earlyAndLatest[0][timePropName]).getTime()/1000;
             }
             else {
-                timeOfDeltaPod = new Date(timePods[1].startTime).getTime()/1000;
+                timeOfDeltaItem = new Date(earlyAndLatest[1][timePropName]).getTime()/1000;
             }
 
-            timeOfDeltaPod /= 60;
-            timeOfDeltaPod = Math.abs(Math.round(timeOfDeltaPod));
+            timeOfDeltaItem /= 60;
+            timeOfDeltaItem = Math.abs(Math.round(timeOfDeltaItem));
 
             let textY = 100;
-            pods.forEach((pod: any) => {
+            contentArray.forEach((item: any) => {
                 ctx.beginPath();
 
-                // Convert pod start time to number of minutes
-                let timeOfPod = new Date(pod.startTime).getTime() / 1000;
-                timeOfPod /= 60;
-                timeOfPod = Math.abs(Math.round(timeOfPod));
-                // console.log(`Time of pod is ${timeOfPod} minutes`);
-                // console.log(`Pod is this many minutes - latest ${Math.round(timeOfLatestPod - timeOfPod)} minutes`);
+                // Convert item start time to number of minutes
+                let timeOfItem = new Date(item[timePropName]).getTime() / 1000;
+                timeOfItem /= 60;
+                timeOfItem = Math.abs(Math.round(timeOfItem));
+                // console.log(`Time of item is ${timeOfItem} minutes`);
+                // console.log(`Item is this many minutes - latest ${Math.round(timeOfDeltaItem - timeOfItem)} minutes`);
 
                 let x = 0;
                 if (ascend){
-                    x = Math.round((timeOfPod - timeOfDeltaPod) / gradiants) + xOffset;
+                    x = Math.round((timeOfItem - timeOfDeltaItem) / gradiants) + xOffset;
                 } else {
-                    x = Math.round((timeOfDeltaPod - timeOfPod) / gradiants) + xOffset;
+                    x = Math.round((timeOfDeltaItem - timeOfItem) / gradiants) + xOffset;
                 }
-                // console.log(`Pod is ${x} on axis`);
+                // console.log(`Item is ${x} on axis`);
 
                 ctx.arc(x, yOffset, 5, 0, 2 * Math.PI);
                 ctx.fillStyle = 'blue';
@@ -211,7 +162,7 @@ const Canvas = ({ markerSize, ascend }: CanvasProps) => {
 
                 ctx.font = "12px Arial";
                 let textX = x +10;
-                let markerText = pod.name;
+                let markerText = item.name;
                 let metrics = ctx.measureText(markerText);
                 let markerTextWidth = metrics.width;
                 let markerTextHeight = metrics.fontBoundingBoxAscent + metrics.fontBoundingBoxDescent;
@@ -220,15 +171,15 @@ const Canvas = ({ markerSize, ascend }: CanvasProps) => {
                 if (textX + markerTextWidth > canvasSize.width - xOffset){
                     textX = x - markerTextWidth - markerSize;
                 }
-                ctx.fillText(pod.name, textX, textY);
+                ctx.fillText(item.name, textX, textY);
 
-                updateTooltipRegions({x: textX, y: textY, width: markerTextWidth, height: markerTextHeight, contentRef: pod});
+                updateTooltipRegions({x: textX, y: textY, width: markerTextWidth, height: markerTextHeight, contentRef: item});
 
                 textY+=yOffset;
             })
 
             // Put time markers on the timeline
-            let timeMarkerDate = new Date(timeOfDeltaPod*60*1000);
+            let timeMarkerDate = new Date(timeOfDeltaItem*60*1000);
             let timeMarkerX = xOffset;
             let altYPos = false;
             while (timeMarkerX < canvasSize.width - xOffset){
@@ -266,7 +217,7 @@ const Canvas = ({ markerSize, ascend }: CanvasProps) => {
         ctx.strokeStyle = '#003300';
         ctx.stroke();
         ctx.closePath();
-    },[ascend, markerSize, canvasSize.width, pods, getEarliestAndLatestPods, dateDiff, getGradiants, updateTooltipRegions, resetTooltipRegions]);
+    },[ascend, markerSize, canvasSize.width, contentArray, getEarliestAndLatestContent, dateDiff, getGradiants, updateTooltipRegions, resetTooltipRegions, timePropName]);
 
     // Main top level redraw to the canvas
     const redraw = useCallback(() => {
@@ -321,7 +272,7 @@ const Canvas = ({ markerSize, ascend }: CanvasProps) => {
                     ctx.font = "20px georgia";
                     
                     // Multi-line tooltips are split by newline
-                    const txt = `${foundRegion.contentRef.name}\n${foundRegion.contentRef.startTime}`;
+                    const txt = `${foundRegion.contentRef.name}\n${foundRegion.contentRef[timePropName]}`;
 
                     const txtLines = txt.split('\n');
                     let maxTxtWidth = 0;
@@ -374,7 +325,7 @@ const Canvas = ({ markerSize, ascend }: CanvasProps) => {
             };
         }
         
-    },[toolTipDisplayed, setRequireRedraw, canvasSize.width, setTooltipDisplayed, markerSize]);
+    },[toolTipDisplayed, setRequireRedraw, canvasSize.width, setTooltipDisplayed, markerSize, timePropName]);
 
      // The main purpose of this useEffect is to redraw the canvas when the tooltip is to be cleared
      // which is a forced redraw after leaving the tooltip region
@@ -394,6 +345,9 @@ const Canvas = ({ markerSize, ascend }: CanvasProps) => {
 Canvas.defaultProps = {
     markerSize: 0,
     ascend: true,
+    contentArray: [],
+    getEarliestAndLatestContent: () => [],
+    timePropName: ""
 };
 
 export default Canvas;
