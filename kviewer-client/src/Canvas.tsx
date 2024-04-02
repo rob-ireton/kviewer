@@ -101,6 +101,7 @@ const Canvas = ({ markerSize, ascend, contentArray, getEarliestAndLatestContent,
         const earlyAndLatest = getEarliestAndLatestContent();
 
         if(contentArray && earlyAndLatest.length > 0){
+            // console.log("Time deltas are " + earlyAndLatest[0][timePropName] + " and " + earlyAndLatest[1][timePropName]);
             console.log("Drawing content");
 
             resetTooltipRegions();
@@ -109,7 +110,7 @@ const Canvas = ({ markerSize, ascend, contentArray, getEarliestAndLatestContent,
             // console.log("Duration is " + durationMinutes + " minutes");
 
             const gradiants = getGradiants(durationMinutes)
-            // console.log(`Each pixel is ${gradiants} many minutes`);
+            // console.log(`Each gradiant is ${gradiants} many pixels`);
 
             // timeOfDeltaItem is the time of the latest item or earliest item depending on the ascend flag
             let timeOfDeltaItem = 0;
@@ -182,6 +183,14 @@ const Canvas = ({ markerSize, ascend, contentArray, getEarliestAndLatestContent,
             let timeMarkerDate = new Date(timeOfDeltaItem*60*1000);
             let timeMarkerX = xOffset;
             let altYPos = false;
+
+            const numberOfMarkers = Math.floor((canvasSize.width-(xOffset*2))/gridSpacing);
+            let step=0
+            const timeIncrInMinutes = (durationMinutes/numberOfMarkers);
+            // console.log(`Time to last delta is ${timeIncrInMinutes * numberOfMarkers} minutes`);
+            // console.log(`Time to last delta is ${timeIncrInMinutes * numberOfMarkers *60*1000} ms`);
+            // console.log(`Date to last delta is approx ${new Date(timeMarkerDate.getTime() + (timeIncrInMinutes * numberOfMarkers *60*1000))}`);
+
             while (timeMarkerX < canvasSize.width - xOffset){
                 ctx.beginPath();
                 ctx.moveTo(timeMarkerX, yOffset);
@@ -195,17 +204,19 @@ const Canvas = ({ markerSize, ascend, contentArray, getEarliestAndLatestContent,
                 let yAlt = altYPos ? 20 : 0;
                 ctx.fillText(timeMarkerDate.toLocaleDateString(), timeMarkerX-10, yOffset-15-yAlt);
 
-                // Increment the timeMarker by the gradiants
-                // timeMarker is the x-axis time marker so we subtract the offset. Then for each pixel
-                // multiply the gradiants to get the time in minutes. Then into milliseconds.
-                if(!ascend){
-                    timeMarkerDate = new Date(timeMarkerDate.getTime() + ((timeMarkerX-xOffset *gradiants)*60*1000));
+                // Increment the timeMarker by minutes of each step and recalc to ms
+
+                const minuteDeleta = timeIncrInMinutes * step;
+
+                if(ascend){
+                    timeMarkerDate = new Date(timeOfDeltaItem*60*1000 + (minuteDeleta*60*1000));
                 }
                 else {
-                    timeMarkerDate = new Date(timeMarkerDate.getTime() - ((timeMarkerX-xOffset *gradiants)*60*1000));
+                    timeMarkerDate = new Date(timeOfDeltaItem*60*1000 - (minuteDeleta*60*1000));
                 }
                 altYPos = !altYPos;
                 timeMarkerX += gradiants;
+                step++;
             }
         }
 
