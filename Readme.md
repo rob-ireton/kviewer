@@ -33,5 +33,5 @@ The plan is to deploy the client in k8s after building a client docker image. An
 At this time I've not optimised the resource needs for any of the containers but they will be small and meant to be very light-weight. I'd like to be able to publish so that it's a simple install for folks to drop onto system, use and then delete as necessary. It's a utility project by nature to start off with.
 
 # filtersvr
-There is a sister project to provide a proxy server to filter some of the API requests with query params. This is really a NodJS playgound and not expected to last.
+There is a sister project to provide a proxy server to filter some of the API requests with query params. This is really a NodJS playgound and not expected to last. I kept this in a separate repo to avoid confusion.
 
