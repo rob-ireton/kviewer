@@ -1,12 +1,13 @@
 import { useState, useCallback, useEffect } from 'react';
-import { Button, Dropdown } from 'antd';
+import { Button, Checkbox, Collapse, Dropdown } from 'antd';
+import { SettingOutlined } from '@ant-design/icons';
 import Canvas from './Canvas';
 import {ApiResponse} from './services/ApiHandler';
 import ApiHandler from './services/ApiHandler';
 
 const apiHandler = new ApiHandler();
 
-const items = [
+const contentTypeItems = [
   {
     label: "pods",
     key: "1",
@@ -24,9 +25,10 @@ const items = [
 const View = () => {
     const [markerSize, updateMarkerSize] = useState(5);
     const [toggleAscend, updateToggleAscend] = useState(true);
+    const [trailingLines, updateTrailingLines] = useState(true);
     const [contentArray, setContentArray] = useState<any>([]);
     const [timePropName, setTimePropName] = useState<string>("startTime");
-    const [contentType, setContentType] = useState<string>(items[0].label);
+    const [contentType, setContentType] = useState<string>(contentTypeItems[0].label);
 
     const ascendText = toggleAscend ? "Ascending" : "Descending";
 
@@ -111,30 +113,52 @@ const View = () => {
       };
 
     const handleMenuClick = (e: any) => {
-        const item = items.find((element) => element.key === e.key);
+        const item = contentTypeItems.find((element) => element.key === e.key);
         if (item) {
             setContentType(item.label);
         }
       };
     const menuProps = {
-        items,
+        items: contentTypeItems,
         onClick: handleMenuClick,
       };
 
+     useEffect(() => {
+        refreshContent();
+     }, [trailingLines, refreshContent]);
+
+    const expanderItems = [
+        {
+            key: '1',
+            label: 'View Settings',
+            children: 
+            <>
+                <Button type="primary" onClick={() => updateMarkerSize(prevData=> (prevData+1))}>Inflate</Button>
+                <Button type="primary" onClick={() => updateMarkerSize(markerSize-1)}>Deflate</Button>
+                <Button type="primary" onClick={() => updateToggleAscend(prevData=> (!prevData))}>{ascendText}</Button>
+                <Checkbox onChange={(e) => { updateTrailingLines(e.target.checked);}}>Trailing lines</Checkbox>
+                <Dropdown.Button menu={menuProps} onClick={handleButtonClick}
+                    placement="bottom"
+                    arrow={{
+                        pointAtCenter: true,
+                    }}>
+                        {contentType}
+                </Dropdown.Button> 
+            </>,
+            extra: <SettingOutlined/>,
+        }
+    ];
+
     return <>
-        <Button type="primary" onClick={() => updateMarkerSize(prevData=> (prevData+1))}>Inflate</Button>
-        <Button type="primary" onClick={() => updateMarkerSize(markerSize-1)}>Deflate</Button>
-        <Button type="primary" onClick={() => updateToggleAscend(prevData=> (!prevData))}>{ascendText}</Button>
-        <Dropdown.Button menu={menuProps} onClick={handleButtonClick}
-            placement="bottom"
-            arrow={{
-                pointAtCenter: true,
-            }}>
-                {contentType}
-        </Dropdown.Button> 
+        <Collapse
+            defaultActiveKey={['1']}
+            items={expanderItems}
+            size="small"
+        />
         <Canvas
             markerSize={markerSize}
             ascend={toggleAscend}
+            trailingLines={trailingLines}
             contentArray={contentArray}
             getEarliestAndLatestContent={getEarliestAndLatestContent}
             timePropName={timePropName}

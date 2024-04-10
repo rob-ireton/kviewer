@@ -3,12 +3,13 @@ import React, { useRef, useState, useEffect, useCallback } from 'react';
 interface CanvasProps {
     markerSize: number;
     ascend: boolean;
+    trailingLines?: boolean;
     contentArray?: any[],
     getEarliestAndLatestContent: () => any[],
     timePropName: string;
 }
 
-const Canvas = ({ markerSize, ascend, contentArray, getEarliestAndLatestContent, timePropName }: CanvasProps) => {
+const Canvas = ({ markerSize, ascend, trailingLines, contentArray, getEarliestAndLatestContent, timePropName }: CanvasProps) => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const [toolTipDisplayed, setTooltipDisplayed] = useState<boolean>(false);
     const [requireRedraw, setRequireRedraw] = useState<boolean>(false);
@@ -150,7 +151,9 @@ const Canvas = ({ markerSize, ascend, contentArray, getEarliestAndLatestContent,
                 ctx.closePath();
 
                 // By not beginning a new path, a happy little accident means we have a pointer line to the text
-                // ctx.beginPath();
+                if (!trailingLines){
+                    ctx.beginPath();
+                }
                 ctx.arc(x, textY, markerSize, 0, 2 * Math.PI);
                 ctx.fillStyle = 'blue';
                 ctx.lineWidth = 1;
@@ -225,7 +228,18 @@ const Canvas = ({ markerSize, ascend, contentArray, getEarliestAndLatestContent,
         ctx.strokeStyle = '#003300';
         ctx.stroke();
         ctx.closePath();
-    },[ascend, markerSize, canvasSize.width, contentArray, getEarliestAndLatestContent, dateDiff, getGradiants, updateTooltipRegions, resetTooltipRegions, timePropName]);
+    },[
+        ascend,
+        canvasSize.width,
+        contentArray,
+        markerSize,
+        trailingLines,
+        timePropName,
+        dateDiff,
+        getEarliestAndLatestContent,
+        getGradiants,
+        resetTooltipRegions,
+        updateTooltipRegions]);
 
     // Main top level redraw to the canvas
     const redraw = useCallback(() => {
@@ -353,6 +367,7 @@ const Canvas = ({ markerSize, ascend, contentArray, getEarliestAndLatestContent,
 Canvas.defaultProps = {
     markerSize: 0,
     ascend: true,
+    trailingLines: true,
     contentArray: [],
     getEarliestAndLatestContent: () => [],
     timePropName: ""
