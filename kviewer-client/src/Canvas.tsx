@@ -107,8 +107,6 @@ const Canvas = ({ markerSize, ascend, contentArray, getEarliestAndLatestContent,
             resetTooltipRegions();
 
             const durationMinutes = dateDiff(new Date(earlyAndLatest[0][timePropName]), new Date(earlyAndLatest[1][timePropName]));
-            // console.log("Duration is " + durationMinutes + " minutes");
-
             const gradiants = getGradiants(durationMinutes)
             // console.log(`Each gradiant is ${gradiants} many pixels`);
 
@@ -187,7 +185,6 @@ const Canvas = ({ markerSize, ascend, contentArray, getEarliestAndLatestContent,
             const numberOfMarkers = Math.floor((canvasSize.width-(xOffset*2))/gridSpacing);
             let step=0
             const timeIncrInMinutes = (durationMinutes/numberOfMarkers);
-            // console.log(`Time to last delta is ${timeIncrInMinutes * numberOfMarkers} minutes`);
             // console.log(`Time to last delta is ${timeIncrInMinutes * numberOfMarkers *60*1000} ms`);
             // console.log(`Date to last delta is approx ${new Date(timeMarkerDate.getTime() + (timeIncrInMinutes * numberOfMarkers *60*1000))}`);
 
@@ -215,7 +212,7 @@ const Canvas = ({ markerSize, ascend, contentArray, getEarliestAndLatestContent,
                     timeMarkerDate = new Date(timeOfDeltaItem*60*1000 - (minuteDeleta*60*1000));
                 }
                 altYPos = !altYPos;
-                timeMarkerX += gradiants;
+                timeMarkerX += gridSpacing;
                 step++;
             }
         }
