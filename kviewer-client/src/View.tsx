@@ -137,7 +137,7 @@ const View = () => {
                 <Button type="primary" onClick={() => updateMarkerSize(markerSize-1)}>Deflate</Button>
                 <Button type="primary" onClick={() => updateToggleAscend(prevData=> (!prevData))}>{ascendText}</Button>
                 <Checkbox id='trailingSpace' onChange={(e) => { updateTrailingLines(e.target.checked);}}>Trailing lines</Checkbox>
-                <Dropdown.Button menu={menuProps} onClick={handleButtonClick}
+                <Dropdown.Button data-testid="dataType" menu={menuProps} onClick={handleButtonClick}
                     placement="bottom"
                     arrow={{
                         pointAtCenter: true,
