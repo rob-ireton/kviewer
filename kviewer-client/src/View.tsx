@@ -136,7 +136,7 @@ const View = () => {
                 <Button type="primary" onClick={() => updateMarkerSize(prevData=> (prevData+1))}>Inflate</Button>
                 <Button type="primary" onClick={() => updateMarkerSize(markerSize-1)}>Deflate</Button>
                 <Button type="primary" onClick={() => updateToggleAscend(prevData=> (!prevData))}>{ascendText}</Button>
-                <Checkbox onChange={(e) => { updateTrailingLines(e.target.checked);}}>Trailing lines</Checkbox>
+                <Checkbox id='trailingSpace' onChange={(e) => { updateTrailingLines(e.target.checked);}}>Trailing lines</Checkbox>
                 <Dropdown.Button menu={menuProps} onClick={handleButtonClick}
                     placement="bottom"
                     arrow={{
