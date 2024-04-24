@@ -1,9 +1,12 @@
 import { useState, useCallback, useEffect } from 'react';
-import { Button, Checkbox, Collapse, Dropdown } from 'antd';
+import { Button, Checkbox, Dropdown, Collapse } from 'antd';
 import { SettingOutlined } from '@ant-design/icons';
 import Canvas from './Canvas';
+import './view.css';
 import {ApiResponse} from './services/ApiHandler';
 import ApiHandler from './services/ApiHandler';
+
+// const { Panel } = Collapse
 
 const apiHandler = new ApiHandler();
 
@@ -136,7 +139,7 @@ const View = () => {
                 <Button type="primary" onClick={() => updateMarkerSize(prevData=> (prevData+1))}>Inflate</Button>
                 <Button type="primary" onClick={() => updateMarkerSize(markerSize-1)}>Deflate</Button>
                 <Button type="primary" onClick={() => updateToggleAscend(prevData=> (!prevData))}>{ascendText}</Button>
-                <Checkbox id='trailingSpace' onChange={(e) => { updateTrailingLines(e.target.checked);}}>Trailing lines</Checkbox>
+                <Checkbox id="trailingSpace" checked={trailingLines} onChange={(e) => { updateTrailingLines(e.target.checked);}}>Trailing lines</Checkbox>
                 <Dropdown.Button data-testid="dataType" menu={menuProps} onClick={handleButtonClick}
                     placement="bottom"
                     arrow={{
