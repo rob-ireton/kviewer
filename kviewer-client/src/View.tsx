@@ -2,10 +2,9 @@ import { useState, useCallback, useEffect } from 'react';
 import { Button, Checkbox, Dropdown, Collapse } from 'antd';
 import { SettingOutlined } from '@ant-design/icons';
 import Canvas from './Canvas';
+import './view.css';
 import {ApiResponse} from './services/ApiHandler';
 import ApiHandler from './services/ApiHandler';
-
-// const { Panel } = Collapse
 
 const apiHandler = new ApiHandler();
 
